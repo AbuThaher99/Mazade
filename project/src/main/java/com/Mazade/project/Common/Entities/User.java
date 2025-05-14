@@ -1,7 +1,6 @@
 package com.Mazade.project.Common.Entities;
 
 import com.Mazade.project.Common.Enums.Gender;
-import com.Mazade.project.Common.Enums.Post;
 import com.Mazade.project.Common.Enums.Role;
 import com.Mazade.project.Common.Enums.Status;
 
@@ -21,7 +20,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
@@ -70,10 +68,9 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "ratign")
     private double rating;
 
-    @Column(name = "status")
-    @JsonIgnore
-    @Builder.Default
-    private Status status = Status.ACTIVE;
+    @Column(name = "status", columnDefinition = "VARCHAR(10) CHECK (status IN ('ACTIVE', 'BLOCKED'))")
+    @Enumerated(EnumType.STRING)
+    private Status status;
 
     @Column(name = "paymentToken")
     private String paymentToken;

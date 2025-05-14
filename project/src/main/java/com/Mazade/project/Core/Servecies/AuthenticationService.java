@@ -51,6 +51,9 @@ public class AuthenticationService {
     @Transactional
     public AuthenticationResponse adduser(User user) throws UserNotFoundException, IOException {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRole(Role.USER);
+        user.setStatus(Status.ACTIVE);
+        user.setRating(0.0);
         var savedUser = repository.save(user);
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);

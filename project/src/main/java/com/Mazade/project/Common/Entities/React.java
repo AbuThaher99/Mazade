@@ -1,6 +1,5 @@
 package com.Mazade.project.Common.Entities;
 
-import com.Mazade.project.Common.Enums.Post;
 import com.Mazade.project.Common.Enums.ReactType;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
@@ -28,7 +27,7 @@ public class React extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
     @NotNull(message = "User is required")
-    @JsonBackReference("postInteresteds")
+    @JsonBackReference("userReacts")
     private User user;
 
     @Column(name = "reactType", nullable = false)

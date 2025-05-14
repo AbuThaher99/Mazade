@@ -30,6 +30,7 @@ public class SecurityConfiguration {
             "http://localhost:4200",
             "/admin/user/**",
             "/swagger-ui/**",
+            "/whitelist/**",
             "/swagger-ui.html","/resetPasswordPage" ,};
 
     private final JwtAuthenticationFilter jwtAuthFilter;

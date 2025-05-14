@@ -1,6 +1,5 @@
 package com.Mazade.project.Common.Entities;
 
-import com.Mazade.project.Common.Enums.Post;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
@@ -26,12 +25,12 @@ public class Interested extends BaseEntity{
     @ManyToOne
     @JoinColumn(name = "postId", nullable = false)
     @NotNull(message = "Post is required")
-    @JsonBackReference("postReacts")
+    @JsonBackReference("postInteresteds")
     private Post post;
 
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
     @NotNull(message = "User is required")
-    @JsonBackReference("userInterested")
+    @JsonBackReference("userInteresteds")
     private User user;
 }
