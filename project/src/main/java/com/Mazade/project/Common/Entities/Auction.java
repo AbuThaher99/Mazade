@@ -1,8 +1,6 @@
 package com.Mazade.project.Common.Entities;
-import com.Mazade.project.Common.Enums.Post;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

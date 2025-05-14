@@ -20,7 +20,7 @@ public enum Role {
                     Permission.ADMIN_CREATE
             )
     ),
-    User(
+    USER(
             Set.of(
                     Permission.DOCTOR_READ,
                     Permission.DOCTOR_UPDATE

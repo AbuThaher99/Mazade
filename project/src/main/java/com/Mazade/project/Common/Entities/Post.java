@@ -1,6 +1,8 @@
-package com.Mazade.project.Common.Enums;
+package com.Mazade.project.Common.Entities;
 
 import com.Mazade.project.Common.Entities.*;
+import com.Mazade.project.Common.Enums.Category;
+import com.Mazade.project.Common.Enums.Status;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -44,10 +46,9 @@ public class Post extends BaseEntity {
     @NotNull(message = "Bid step cannot be blank")
     private double bidStep;
 
-    @Column(name = "status")
-    @JsonIgnore
-    @Builder.Default
-    private Status status = Status.WAITING;
+    @Column(name = "status", columnDefinition = "VARCHAR(10) CHECK (status IN ('WAITING', 'COMPLETED'))")
+    @Enumerated(EnumType.STRING)
+    private Status status;
 
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
