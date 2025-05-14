@@ -31,7 +31,7 @@ public class SecurityConfiguration {
             "/admin/user/**",
             "/swagger-ui/**",
             "/whitelist/**",
-            "/swagger-ui.html","/resetPasswordPage" ,};
+            "/swagger-ui.html","/resetPasswordPage"};
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;

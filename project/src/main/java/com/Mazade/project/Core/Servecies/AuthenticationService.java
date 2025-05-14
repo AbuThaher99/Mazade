@@ -205,86 +205,84 @@ public class AuthenticationService {
 
 //
 //
-//    @Transactional
-//    public GeneralResponse resetPassword(String email, String password) throws UserNotFoundException {
-//        var user = repository.findByEmail(email)
-//                .orElseThrow(() -> new UserNotFoundException("User not found"));
-//        user.setPassword(passwordEncoder.encode(password));
-//         repository.save(user);
-////        var jwtToken = jwtService.generateToken(user);
-////        var refreshToken = jwtService.generateRefreshToken(user);
-////        saveUserToken(savedUser, jwtToken);
-//
-//        return GeneralResponse.builder()
-//                .message("Password reset successfully")
-//                .build();
-//    }
-//
-//    @Transactional
-//    public void sendVerificationCode(String email) throws UserNotFoundException, MessagingException {
-//        var userEmail = repository.findByEmail(email)
-//                .orElseThrow(() -> new UserNotFoundException("User not found"));
-//
-//        String verificationCode = UUID.randomUUID().toString();
-//        Email emailEntity = Email.builder()
-//                .email(email)
-//                .verificationCode(verificationCode)
-//                .verified(false)
-//                .build();
-//        emailRepository.save(emailEntity);
-//        String verificationUrl = "http://localhost:8080/resetPasswordPage?verificationCode=" + verificationCode + "&email=" + email;
-//        emailService.sendVerificationEmail(email, "Email Verification", verificationUrl);
-//    }
-//
-//    @Transactional
-//    public GeneralResponse verifyCodeAndResetPassword(String email, String verificationCode, String newPassword) throws UserNotFoundException {
-//        Email emailEntity = emailRepository.findByEmail(email)
-//                .orElseThrow(() -> new UserNotFoundException("email not found"));
-//        if (emailEntity.getVerificationCode().equals(verificationCode)) {
-//            emailEntity.setVerified(true);
-//            emailRepository.save(emailEntity);
-//        } else {
-//            throw new UserNotFoundException("Invalid verification code ");
-//        }
-//        return resetPassword(email, newPassword);
-//    }
-//    public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
-//        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-//        final String refreshToken;
-//        final String userEmail;
-//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-//            return;
-//        }
-//        refreshToken = authHeader.substring(7);
-//        userEmail = jwtService.extractUsername(refreshToken);
-//        if (userEmail != null) {
-//            var user = this.repository.findByEmail(userEmail)
-//                    .orElseThrow();
-//            if (jwtService.isTokenValid(refreshToken, user)) {
-//                var accessToken = jwtService.generateToken(user);
-//                revokeAllUserTokens(user);
-//                saveUserToken(user, accessToken);
-//                var authResponse = AuthenticationResponse.builder()
-//                        .accessToken(accessToken)
-//                        .refreshToken(refreshToken)
-//                        .build();
-//                new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
-//            }
-//        }
-//    }
-//
-//    public String extractToken(HttpServletRequest request) {
-//        String authHeader = request.getHeader("Authorization");
-//        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-//            return authHeader.substring(7);
-//        }
-//        return null;
-//    }
-//
-//    public User extractUserFromToken(String token) {
-//        String username = jwtService.extractUsername(token);
-//        return repository.findByEmail(username).orElse(null);
-//    }
+    @Transactional
+    public GeneralResponse resetPassword(String email, String password) throws UserNotFoundException {
+        var user = repository.findByEmail(email,Status.ACTIVE)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        user.setPassword(passwordEncoder.encode(password));
+         repository.save(user);
+        return GeneralResponse.builder()
+                .message("Password reset successfully")
+                .build();
+    }
+
+    @Transactional
+    public void sendVerificationCode(String email) throws UserNotFoundException, MessagingException {
+        var userEmail = repository.findByEmail(email,Status.ACTIVE)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        String verificationCode = UUID.randomUUID().toString();
+        Email emailEntity = Email.builder()
+                .email(email)
+                .verificationCode(verificationCode)
+                .verified(false)
+                .build();
+        emailRepository.save(emailEntity);
+        String verificationUrl = "http://localhost:8080/resetPasswordPage?verificationCode=" + verificationCode + "&email=" + email;
+        emailService.sendVerificationEmail(email, "Email Verification", verificationUrl);
+    }
+
+    @Transactional
+    public GeneralResponse verifyCodeAndResetPassword(String email, String verificationCode, String newPassword) throws UserNotFoundException {
+        Email emailEntity = emailRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("email not found"));
+        if (emailEntity.getVerificationCode().equals(verificationCode)) {
+            emailEntity.setVerified(true);
+            emailRepository.save(emailEntity);
+        } else {
+            throw new UserNotFoundException("Invalid verification code ");
+        }
+        return resetPassword(email, newPassword);
+    }
+    public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        final String refreshToken;
+        final String userEmail;
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return;
+        }
+        refreshToken = authHeader.substring(7);
+        userEmail = jwtService.extractUsername(refreshToken);
+        if (userEmail != null) {
+            var user = this.repository.findByEmail(userEmail,Status.ACTIVE)
+                    .orElseThrow();
+            if (jwtService.isTokenValid(refreshToken, user)) {
+                var accessToken = jwtService.generateToken(user);
+                revokeAllUserTokens(user);
+                saveUserToken(user, accessToken);
+                var authResponse = AuthenticationResponse.builder()
+                        .accessToken(accessToken)
+                        .refreshToken(refreshToken)
+                        .build();
+                new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
+            }
+        }
+    }
+
+    public String extractToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
+    }
+    public User extractUserFromToken(String token) {
+        String username = jwtService.extractUsername(token);
+        return repository.findByEmail(username,Status.ACTIVE).orElse(null);
+    }
+
+
+
 //
 //    @Transactional
 //    public AuthenticationResponse ChangePassword(String email, String oldPassword, String newPassword) throws UserNotFoundException {
