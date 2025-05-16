@@ -93,8 +93,8 @@ public class User extends BaseEntity implements UserDetails {
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY , orphanRemoval = true)
     @JoinColumn(name = "userId", referencedColumnName = "id")
-    @JsonManagedReference("userReacts")
-    private List<React> reacts;
+    @JsonManagedReference("userBid")
+    private List<AutoBid> autoBids;
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY , orphanRemoval = true)
     @JoinColumn(name = "userId", referencedColumnName = "id")

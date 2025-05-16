@@ -12,5 +12,6 @@ public enum Category {
     OFFICE_SUPPLIES,
     FURNITURE,
     HANDMADE,
-    INDUSTRIAL
+    INDUSTRIAL,
+    OTHER,
 }

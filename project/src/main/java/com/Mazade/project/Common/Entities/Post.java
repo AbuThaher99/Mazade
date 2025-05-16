@@ -1,10 +1,8 @@
 package com.Mazade.project.Common.Entities;
 
-import com.Mazade.project.Common.Entities.*;
 import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Common.Enums.Status;
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -35,7 +33,7 @@ public class Post extends BaseEntity {
     private double startPrice;
 
     @Column(name = "Category", nullable = false)
-    @NotNull(message = "Category cannot be blank")
+    @Enumerated(EnumType.STRING)
     private Category category;
 
     @Column(name = "media", nullable = false, columnDefinition = "TEXT")
@@ -58,15 +56,16 @@ public class Post extends BaseEntity {
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY , orphanRemoval = true)
     @JoinColumn(name = "postId", referencedColumnName = "id")
-    @JsonManagedReference("postReacts")
-    private List<React> reacts;
+    @JsonManagedReference("postBid")
+    private List<AutoBid> autoBids;
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY , orphanRemoval = true)
     @JoinColumn(name = "postId", referencedColumnName = "id")
     @JsonManagedReference("postInteresteds")
     private List<Interested> interesteds;
 
-    @OneToOne(mappedBy = "post", cascade = CascadeType.ALL , fetch = FetchType.LAZY)
+    @ManyToOne
+    @JoinColumn(name = "auctionId", nullable = false)
     @JsonBackReference("postAuction")
     private Auction auction;
 }
