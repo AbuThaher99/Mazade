@@ -1,18 +1,15 @@
 package com.Mazade.project.Common.Entities;
-import com.Mazade.project.Common.Converters.CategoryMapConverter;
+
+import com.Mazade.project.Common.Enums.AuctionStatus;
 import com.Mazade.project.Common.Enums.Category;
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
@@ -22,18 +19,21 @@ import java.util.Map;
 @Table(name = "auction")
 public class Auction extends BaseEntity {
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY , orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JoinColumn(name = "auctionId", referencedColumnName = "id")
     @JsonManagedReference("postAuction")
     private List<Post> posts;
 
-    @Column(name = "Category", nullable = false, columnDefinition = "TEXT")
-    @Convert(converter = CategoryMapConverter.class)
-    private Map<Category, Integer> category;
+    @Column(name = "category", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Category category;
 
-    @Column(name = "isFinished")
-    @JsonIgnore
+    @Column(name = "postCount", nullable = false)
     @Builder.Default
-    private boolean isFinished = false;
+    private Integer postCount = 0;
 
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private AuctionStatus status = AuctionStatus.WAITING;
 }

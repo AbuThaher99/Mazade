@@ -17,8 +17,8 @@ import io.swagger.v3.oas.annotations.servers.Server;
                         name = "Mohammad AbuThaher",
                         email = "1202833@Students.Birzeit.edu"
                 ),
-                description = "OpenApi documentation for Project Training API",
-                title = "Project Training API",
+                description = "OpenApi documentation for Mazadi App",
+                title = "Mazadi App API",
                 version = "1.0",
                 license = @License(
                         name = "No License",
