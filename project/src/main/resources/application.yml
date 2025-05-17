@@ -46,3 +46,7 @@ logging:
     root: INFO
 server:
   port: '8080'
+cloudinary:
+  cloud-name: dcmqy8d7l
+  api-key: 764411251957113
+  api-secret: joaXL5NJ4vRrDt88E4wfJ5e2WbM
