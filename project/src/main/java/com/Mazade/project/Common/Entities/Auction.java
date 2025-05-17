@@ -1,6 +1,8 @@
 package com.Mazade.project.Common.Entities;
+import com.Mazade.project.Common.Converters.CategoryMapConverter;
 import com.Mazade.project.Common.Enums.Category;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -10,6 +12,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -19,19 +22,18 @@ import java.util.List;
 @Table(name = "auction")
 public class Auction extends BaseEntity {
 
-    @Column(name = "winnerId")
-    private Long winnerId;
-
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY , orphanRemoval = true)
     @JoinColumn(name = "auctionId", referencedColumnName = "id")
     @JsonManagedReference("postAuction")
     private List<Post> posts;
 
-    @Column(name = "Category", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private Category category;
+    @Column(name = "Category", nullable = false, columnDefinition = "TEXT")
+    @Convert(converter = CategoryMapConverter.class)
+    private Map<Category, Integer> category;
 
-    @Column(name = "finalPrice")
-    private double finalPrice;
+    @Column(name = "isFinished")
+    @JsonIgnore
+    @Builder.Default
+    private boolean isFinished = false;
 
 }

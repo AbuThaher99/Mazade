@@ -48,6 +48,12 @@ public class Post extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Status status;
 
+    @Column(name = "winnerId")
+    private Long winnerId;
+
+    @Column(name = "finalPrice")
+    private double finalPrice;
+
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
     @NotNull(message = "User is required")
