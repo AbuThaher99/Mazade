@@ -1,10 +1,12 @@
 package com.Mazade.project.Core.Servecies;
 
 import com.Mazade.project.Common.DTOs.PaginationDTO;
+import com.Mazade.project.Common.Entities.Auction;
 import com.Mazade.project.Common.Entities.Post;
 import com.Mazade.project.Common.Enums.Category;
+import com.Mazade.project.Common.Enums.Status;
 import com.Mazade.project.Core.Repsitories.PostRepository;
-import lombok.RequiredArgsConstructor;
+import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,11 +23,14 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final CloudinaryService cloudinaryService;
+    private final AuctionService auctionService ;
 
     @Autowired
-    public PostService(PostRepository postRepository, CloudinaryService cloudinaryService) {
+    public PostService(PostRepository postRepository, CloudinaryService cloudinaryService,
+                       AuctionService auctionService){
         this.postRepository = postRepository;
         this.cloudinaryService = cloudinaryService;
+        this.auctionService = auctionService;
     }
 
 
@@ -38,15 +43,36 @@ public class PostService {
 
         // Upload multiple images to Cloudinary
         List<String> imageUrls = cloudinaryService.uploadMultipleImages(images, "posts");
-
-        // Join the URLs with commas
         String mediaString = String.join(",", imageUrls);
-
-        // Set the media field in the post
         post.setMedia(mediaString);
+
+        // Find or create an appropriate auction for this post
+        Category category = post.getCategory();
+        Auction auction = auctionService.findOrCreateAuctionForCategory(category);
+        post.setAuction(auction);
+
+        // Add the post to the auction and update its status
+        auctionService.addPostToAuction(post, auction);
 
         // Save and return the post
         return postRepository.save(post);
+    }
+
+    @Transactional
+    public Post updatePostStatus(Long postId, Status status) throws UserNotFoundException {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new UserNotFoundException("Post not found"));
+
+        // Set the new status
+        post.setStatus(status);
+        Post savedPost = postRepository.save(post);
+
+        // If the status is set to COMPLETED, check if all posts in this auction are completed
+        if (status == Status.COMPLETED) {
+            auctionService.checkAndHandleAuctionCompletion(post.getAuction());
+        }
+
+        return savedPost;
     }
 
     @Transactional

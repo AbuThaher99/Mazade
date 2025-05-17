@@ -1,0 +1,105 @@
+package com.Mazade.project.WebApi.Controllers.User;
+
+import com.Mazade.project.Common.Entities.Post;
+import com.Mazade.project.Common.Enums.Status;
+import com.Mazade.project.Core.Servecies.PostService;
+import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/posts")
+@RequiredArgsConstructor
+public class PostController {
+    private final PostService postService;
+
+    @Operation(summary = "Add a new post with multiple images")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Post created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid post data or no images provided",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = "{\"status\":400,\"message\":\"Invalid post data or no images provided\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            content = @Content(
+                    mediaType = "multipart/form-data",
+                    schema = @Schema(type = "object"),
+                    examples = @ExampleObject(
+                            name = "Post with images",
+                            summary = "Example of adding a post with images",
+                            value = "{\n" +
+                                    "    \"title\": \"iPhone 14 Pro Max\",\n" +
+                                    "    \"description\": \"Brand new iPhone with 256GB storage\",\n" +
+                                    "    \"startPrice\": 500.0,\n" +
+                                    "    \"category\": \"ELECTRONICS\",\n" +
+                                    "    \"bidStep\": 50.0,\n" +
+                                    "    \"status\": \"WAITING\",\n" +
+                                    "    \"user\": {\"id\": 1},\n" +
+                                    "    \"auction\": {\"id\": 1},\n" +
+                                    "  \"media\": link1,link2\n" +
+                                    "}"
+                    )
+            )
+    )
+    @PostMapping("/posts")
+    public ResponseEntity<Post> addPost(
+            @RequestPart("post") Post post,
+            @RequestPart("images") List<MultipartFile> images) {
+
+        try {
+            Post savedPost = postService.addPost(post, images);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedPost);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @Operation(summary = "Update a post's status")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Post status updated successfully",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = "{\"id\":1,\"status\":\"COMPLETED\"}"))),
+            @ApiResponse(responseCode = "404", description = "Post not found",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = "{\"status\":404,\"message\":\"Post not found\"}"))),
+            @ApiResponse(responseCode = "400", description = "Invalid status value",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = "{\"status\":400,\"message\":\"Invalid status value\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PutMapping("/status/{postId}")
+    public ResponseEntity<?> updatePostStatus(
+            @PathVariable Long postId,
+            @RequestParam Status status) {
+        try {
+            Post updatedPost = postService.updatePostStatus(postId, status);
+            return ResponseEntity.ok(updatedPost);
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("status", 404, "message", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("status", 400, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", 500, "message", "Internal server error"));
+        }
+    }
+
+}

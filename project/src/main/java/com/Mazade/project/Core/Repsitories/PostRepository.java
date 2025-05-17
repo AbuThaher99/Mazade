@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
@@ -37,5 +39,5 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category)")
     Page<Post> findAllPosts(Pageable pageable, @Param("search") String search, @Param("category") String category);
-
+    List<Post> findByAuctionId(Long auctionId);
 }
