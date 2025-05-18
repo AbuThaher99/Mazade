@@ -5,6 +5,7 @@ import com.Mazade.project.Common.Entities.Auction;
 import com.Mazade.project.Common.Entities.Post;
 import com.Mazade.project.Common.Entities.User;
 import com.Mazade.project.Common.Enums.AuctionStatus;
+import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Common.Enums.Status;
 import com.Mazade.project.Common.Responses.AuthenticationResponse;
 import com.Mazade.project.Core.Servecies.AuctionService;
@@ -93,12 +94,13 @@ public class WhiteListController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Category category,
             @RequestParam(defaultValue = "false") Boolean sortByDate,
             @RequestParam(defaultValue = "false") Boolean sortByPrice,
             @RequestParam(defaultValue = "false") Boolean sortByRating) {
 
         try {
+
             PaginationDTO<Post> posts = postService.getAllPost(page, size, search, category,
                     sortByDate, sortByPrice, sortByRating);
             return ResponseEntity.ok(posts);

@@ -3,6 +3,7 @@ package com.Mazade.project.Core.Servecies;
 import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Auction;
 import com.Mazade.project.Common.Entities.Post;
+import com.Mazade.project.Common.Enums.AuctionStatus;
 import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Common.Enums.Status;
 import com.Mazade.project.Core.Repsitories.PostRepository;
@@ -76,7 +77,7 @@ public class PostService {
     }
 
     @Transactional
-    public PaginationDTO<Post> getAllPost(int page, int size, String search, String category,
+    public PaginationDTO<Post> getAllPost(int page, int size, String search, Category category,
                                           Boolean sortByDate, Boolean sortByPrice, Boolean sortByRating) {
         if (page < 1) {
             page = 1;
@@ -86,9 +87,7 @@ public class PostService {
         if (search != null && search.isEmpty()) {
             search = null;
         }
-        if (category != null && category.isEmpty()) {
-            category = null;
-        }
+
         Page<Post> postsPage;
 
         if (sortByDate) {
@@ -108,6 +107,67 @@ public class PostService {
         paginationDTO.setNumber(postsPage.getNumber() + 1);
         paginationDTO.setNumberOfElements(postsPage.getNumberOfElements());
         paginationDTO.setContent(postsPage.getContent());
+        return paginationDTO;
+    }
+
+    @Transactional
+    public Post getPostById(Long postId) throws UserNotFoundException {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new UserNotFoundException("Post not found with id: " + postId));
+    }
+
+    @Transactional
+    public Post increasePostFinalPrice(Long postId, double amount) throws UserNotFoundException {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Amount must be greater than zero");
+        }
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new UserNotFoundException("Post not found with id: " + postId));
+
+        // Check if the auction status is IN_PROGRESS
+        if (post.getAuction().getStatus() != AuctionStatus.IN_PROGRESS) {
+            throw new IllegalArgumentException("Cannot increase final price: auction is not in progress");
+        }
+            // check if the post bid step is less than the amount
+        if (amount < post.getBidStep()) {
+            throw new IllegalArgumentException("Amount must be greater than or equal to the bid step");
+        }
+        // If final price is 0 (initialized but not set), use startPrice as base
+        if (post.getFinalPrice() == 0) {
+            post.setFinalPrice(post.getStartPrice() + amount);
+        } else {
+            // Otherwise add to existing final price
+            post.setFinalPrice(post.getFinalPrice() + amount);
+        }
+
+        return postRepository.save(post);
+    }
+
+    @Transactional
+    public PaginationDTO<Post> getPostsByUserId(Long userId, int page, int size) throws UserNotFoundException {
+        if (page < 1) {
+            page = 1;
+        }
+        // Check if the user exists
+        if (!postRepository.existsById(userId)) {
+            throw new UserNotFoundException("User not found with id: " + userId);
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        // Find the posts for the specified user
+        Page<Post> postsPage = postRepository.findByUserIdOrderByCreatedDateDesc(userId, pageable);
+
+        // Convert to PaginationDTO
+        PaginationDTO<Post> paginationDTO = new PaginationDTO<>();
+        paginationDTO.setTotalElements(postsPage.getTotalElements());
+        paginationDTO.setTotalPages(postsPage.getTotalPages());
+        paginationDTO.setSize(postsPage.getSize());
+        paginationDTO.setNumber(postsPage.getNumber() + 1);
+        paginationDTO.setNumberOfElements(postsPage.getNumberOfElements());
+        paginationDTO.setContent(postsPage.getContent());
+
         return paginationDTO;
     }
 }
