@@ -1,6 +1,7 @@
 package com.Mazade.project.Core.Repsitories;
 
 import com.Mazade.project.Common.Entities.Post;
+import com.Mazade.project.Common.Enums.Category;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,26 +19,30 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
             "ORDER BY p.createdDate DESC")
-    Page<Post> SortByDate(Pageable pageable, @Param("search") String search, @Param("category") String category);
+    Page<Post> SortByDate(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
+    // Update the other methods similarly
     @Query("SELECT p FROM Post p WHERE " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
             "ORDER BY p.startPrice ASC")
-    Page<Post> SortByPrice(Pageable pageable, @Param("search") String search, @Param("category") String category);
+    Page<Post> SortByPrice(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
     @Query("SELECT p FROM Post p JOIN p.user u WHERE " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
             "ORDER BY u.rating DESC")
-    Page<Post> SortByRating(Pageable pageable, @Param("search") String search, @Param("category") String category);
+    Page<Post> SortByRating(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
     @Query("SELECT p FROM Post p WHERE " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category)")
-    Page<Post> findAllPosts(Pageable pageable, @Param("search") String search, @Param("category") String category);
+    Page<Post> findAllPosts(Pageable pageable, @Param("search") String search, @Param("category") Category category);
     List<Post> findByAuctionId(Long auctionId);
+
+    @Query("SELECT p FROM Post p WHERE p.user.id = :userId ORDER BY p.createdDate DESC")
+    Page<Post> findByUserIdOrderByCreatedDateDesc(@Param("userId") Long userId, Pageable pageable);
 }
