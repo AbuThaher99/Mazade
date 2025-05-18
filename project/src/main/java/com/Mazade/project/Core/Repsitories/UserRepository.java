@@ -20,6 +20,8 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.email = :email AND u.status = :status")
     Optional<User> findByEmail(@Param("email") String email, @Param("status") Status status);
+    @Query("SELECT u FROM User u WHERE u.id = :id AND u.status = :status")
+    Optional<User> findById(@Param("id") Long id, @Param("status") Status status);
 
 //    @Query("SELECT u FROM User u WHERE u.role = :role AND  u.status =  'ACTIVE'")
 //    Page<User> findAllByRole(@Param("role") Role role, Pageable pageable);

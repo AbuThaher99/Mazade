@@ -2,6 +2,7 @@ package com.Mazade.project.Core.Servecies;
 
 import com.Mazade.project.Common.DTOs.LoginDTO;
 import com.Mazade.project.Common.DTOs.PaginationDTO;
+import com.Mazade.project.Common.DTOs.UserUpdateDTO;
 import com.Mazade.project.Common.Entities.Email;
 import com.Mazade.project.Common.Entities.Token;
 import com.Mazade.project.Common.Entities.User;
@@ -64,26 +65,41 @@ public class AuthenticationService {
                 .message("User " + user.getRole() + " added successfully")
                 .build();
     }
-//
-////    @Transactional
-////    public GeneralResponse UpdateUser(UserUpdateDTO userRequest, Long id) throws UserNotFoundException {
-////        var user = repository.findById(id)
-////                .orElseThrow(() -> new UserNotFoundException("User not found"));
-////        user.setAddress(userRequest.getAddress());
-////        user.setDateOfBirth(userRequest.getDateOfBirth());
-////        user.setFirstName(userRequest.getFirstName());
-////        user.setLastName(userRequest.getLastName());
-////        user.setPhone(userRequest.getPhone());
-////        user.setImage(userRequest.getImage());
-////        repository.save(user);
-////        return GeneralResponse.builder()
-////                .message("User updated successfully")
-////                .build();
-////    }
-//
-//
-//
-//
+
+    public GeneralResponse UpdateUser(UserUpdateDTO userUpdateDTO, Long userId) throws UserNotFoundException {
+        // Find the user by ID and active status
+        User user = repository.findById(userId, Status.ACTIVE)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+
+        // Update only the fields that are provided (not null)
+        if (userUpdateDTO.getFirstName() != null) {
+            user.setFirstName(userUpdateDTO.getFirstName());
+        }
+
+        if (userUpdateDTO.getLastName() != null) {
+            user.setLastName(userUpdateDTO.getLastName());
+        }
+
+        if (userUpdateDTO.getPhone() != null) {
+            user.setPhone(userUpdateDTO.getPhone());
+        }
+
+        if (userUpdateDTO.getCity() != null) {
+            user.setCity(userUpdateDTO.getCity());
+        }
+
+        if (userUpdateDTO.getGender() != null) {
+            user.setGender(userUpdateDTO.getGender());
+        }
+
+        // Save the updated user
+        repository.save(user);
+
+        // Return success response
+        return GeneralResponse.builder()
+                .message("User updated successfully")
+                .build();
+    }
 //    @Transactional
 //    public PaginationDTO<User> GetAllUsers(int page, int size, String search, Role role) {
 //
@@ -284,26 +300,26 @@ public class AuthenticationService {
 
 
 //
-//    @Transactional
-//    public AuthenticationResponse ChangePassword(String email, String oldPassword, String newPassword) throws UserNotFoundException {
-//        var user = repository.findByEmail(email)
-//                .orElseThrow(() -> new UserNotFoundException("User not found"));
-//        if (passwordEncoder.matches(oldPassword, user.getPassword())) {
-//            user.setPassword(passwordEncoder.encode(newPassword));
-//            var savedUser = repository.save(user);
-//            var jwtToken = jwtService.generateToken(user);
-//            var refreshToken = jwtService.generateRefreshToken(user);
-//            saveUserToken(savedUser, jwtToken);
-//            return AuthenticationResponse.builder()
-//                    .accessToken(jwtToken)
-//                    .refreshToken(refreshToken)
-//                    .message("Password changed successfully")
-//                    .build();
-//        } else {
-//            throw new UserNotFoundException("Invalid old password");
-//        }
-//    }
-//
+    @Transactional
+    public AuthenticationResponse ChangePassword(String email, String oldPassword, String newPassword) throws UserNotFoundException {
+        var user = repository.findByEmail(email,Status.ACTIVE)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        if (passwordEncoder.matches(oldPassword, user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(newPassword));
+            var savedUser = repository.save(user);
+            var jwtToken = jwtService.generateToken(user);
+            var refreshToken = jwtService.generateRefreshToken(user);
+            saveUserToken(savedUser, jwtToken);
+            return AuthenticationResponse.builder()
+                    .accessToken(jwtToken)
+                    .refreshToken(refreshToken)
+                    .message("Password changed successfully")
+                    .build();
+        } else {
+            throw new UserNotFoundException("Invalid old password");
+        }
+    }
+
 //
 //    @Transactional
 //    public boolean expiredToken(Long id, String token)  {
