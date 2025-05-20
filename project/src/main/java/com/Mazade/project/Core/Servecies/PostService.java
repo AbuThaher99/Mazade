@@ -112,8 +112,13 @@ public class PostService {
 
     @Transactional
     public Post getPostById(Long postId) throws UserNotFoundException {
-        return postRepository.findById(postId)
+        Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new UserNotFoundException("Post not found with id: " + postId));
+
+        post.setViewCount(post.getViewCount() + 1);
+        postRepository.save(post);
+
+        return post;
     }
 
     @Transactional
