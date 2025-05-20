@@ -54,6 +54,10 @@ public class Post extends BaseEntity {
     @Column(name = "finalPrice")
     private double finalPrice;
 
+    @Column(name = "viewCount")
+    @Builder.Default
+    private int viewCount = 0;
+
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
     @NotNull(message = "User is required")

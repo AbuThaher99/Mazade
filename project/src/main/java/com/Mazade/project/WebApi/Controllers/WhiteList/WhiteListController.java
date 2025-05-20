@@ -111,6 +111,29 @@ public class WhiteListController {
         }
     }
 
-
+    @Operation(summary = "Get a post by ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Post found successfully",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Post.class),
+                            examples = @ExampleObject(value = "{\"id\":1,\"title\":\"iPhone 14 Pro Max\",\"description\":\"Brand new iPhone\",\"status\":\"ACTIVE\"}"))),
+            @ApiResponse(responseCode = "404", description = "Post not found",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = "{\"status\":404,\"message\":\"Post not found with id: 1\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/{postId}")
+    public ResponseEntity<?> getPostById(@PathVariable Long postId) {
+        try {
+            Post post = postService.getPostById(postId);
+            return ResponseEntity.ok(post);
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("status", 404, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", 500, "message", "Internal server error"));
+        }
+    }
 
 }
