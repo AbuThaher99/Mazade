@@ -1,5 +1,6 @@
 package com.Mazade.project.Core.Servecies;
 
+import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Auction;
 import com.Mazade.project.Common.Entities.Post;
 import com.Mazade.project.Common.Enums.AuctionStatus;
@@ -9,6 +10,9 @@ import com.Mazade.project.Core.Repsitories.AuctionRepository;
 import com.Mazade.project.Core.Repsitories.PostRepository;
 import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,5 +106,41 @@ public class AuctionService {
 
         auction.setStatus(newStatus);
         return auctionRepository.save(auction);
+    }
+
+    @Transactional
+    public PaginationDTO<Auction> getAllAuctions(int page, int size, AuctionStatus status) {
+        if (page < 1) {
+            page = 1;
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<Auction> auctionsPage = auctionRepository.findAllWithFilters(pageable, status);
+
+        PaginationDTO<Auction> paginationDTO = new PaginationDTO<>();
+        paginationDTO.setTotalElements(auctionsPage.getTotalElements());
+        paginationDTO.setTotalPages(auctionsPage.getTotalPages());
+        paginationDTO.setSize(auctionsPage.getSize());
+        paginationDTO.setNumber(auctionsPage.getNumber() + 1);
+        paginationDTO.setNumberOfElements(auctionsPage.getNumberOfElements());
+        paginationDTO.setContent(auctionsPage.getContent());
+
+        return paginationDTO;
+    }
+
+    @Transactional
+    public List<Auction> getAuctionsByStatus(AuctionStatus status) {
+        return auctionRepository.findByStatus(status);
+    }
+
+    @Transactional
+    public Auction getAuctionById(Long id) {
+        return auctionRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("Auction not found"));
+    }
+
+    @Transactional
+    public Auction getAuctionByCategoryAndStatus(Category category, AuctionStatus status) {
+        return auctionRepository.findByCategoryAndStatus(category, status);
     }
 }
