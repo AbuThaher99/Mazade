@@ -74,6 +74,11 @@ public class Post extends BaseEntity {
     @JsonManagedReference("postInteresteds")
     private List<Interested> interesteds;
 
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY , orphanRemoval = true)
+    @JoinColumn(name = "postId", referencedColumnName = "id")
+    @JsonManagedReference("postBidTrackers")
+    private List<AuctionBidTracker>  auctionBidTrackers;
+
     @ManyToOne
     @JoinColumn(name = "auctionId", nullable = false)
     @JsonBackReference("postAuction")

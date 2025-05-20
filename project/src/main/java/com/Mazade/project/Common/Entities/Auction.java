@@ -24,6 +24,11 @@ public class Auction extends BaseEntity {
     @JsonManagedReference("postAuction")
     private List<Post> posts;
 
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @JoinColumn(name = "auctionId", referencedColumnName = "id")
+    @JsonManagedReference("actionBidTrackers")
+    private List<AuctionBidTracker>  auctionBidTrackers;
+
     @Column(name = "category", nullable = false)
     @Enumerated(EnumType.STRING)
     private Category category;

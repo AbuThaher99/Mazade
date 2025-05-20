@@ -2,7 +2,11 @@ package com.Mazade.project.WebApi.Controllers.User;
 
 import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Post;
+import com.Mazade.project.Common.Entities.User;
+import com.Mazade.project.Common.Enums.AuctionStatus;
 import com.Mazade.project.Common.Enums.Status;
+import com.Mazade.project.Core.Servecies.AuctionBidTrackerService;
+import com.Mazade.project.Core.Servecies.AuthenticationService;
 import com.Mazade.project.Core.Servecies.PostService;
 import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +31,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PostController {
     private final PostService postService;
+
+    private final AuthenticationService authenticationService;
+
+    private final AuctionBidTrackerService auctionBidTrackerService;
+
 
     @Operation(summary = "Add a new post with multiple images")
     @ApiResponses(value = {
@@ -121,9 +131,15 @@ public class PostController {
     @PutMapping("/{postId}/increase-price")
     public ResponseEntity<?> increasePostFinalPrice(
             @PathVariable Long postId,
-            @RequestParam double amount) {
+            @RequestParam double amount,
+            HttpServletRequest request) {
         try {
+            String token = authenticationService.extractToken(request);
+            User user = authenticationService.extractUserFromToken(token);
             Post updatedPost = postService.increasePostFinalPrice(postId, amount);
+            if (user != null && updatedPost.getAuction().getStatus() == AuctionStatus.IN_PROGRESS) {
+                auctionBidTrackerService.trackBid(updatedPost.getAuction(), updatedPost, user.getId(), amount);
+            }
             return ResponseEntity.ok(updatedPost);
         } catch (UserNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
