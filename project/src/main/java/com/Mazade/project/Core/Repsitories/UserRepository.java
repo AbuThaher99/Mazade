@@ -39,5 +39,22 @@ public interface UserRepository extends JpaRepository<User, Long> {
 //    @Query("SELECT u FROM User u WHERE u.status =  'BLOCKED' AND u.id = :id")
 //    Optional<User> findDeletedById(@Param("id") Long id);
 
+    @Query("SELECT u FROM User u WHERE u.role = :role AND u.status = :status")
+    Page<User> findAllByRole(@Param("role") Role role, @Param("status") Status status, Pageable pageable);
 
+    @Query("SELECT u FROM User u WHERE u.status = 'ACTIVE'")
+    Page<User> findAll(Pageable pageable);
+
+    @Query("SELECT u FROM User u WHERE u.status = :status AND" +
+            " (:search IS NULL OR :search = '' OR u.firstName LIKE %:search% or u.lastName LIKE %:search% or u.email LIKE %:search% or u.phone LIKE %:search% or u.city LIKE %:search% ) and " +
+            "(:role IS NULL OR u.role = :role)")
+    Page<User> findAll(Pageable pageable, @Param("search") String search, @Param("status") Status status, @Param("role") Role role);
+
+    @Query("SELECT u FROM User u WHERE u.status = :status AND" +
+            " (:search IS NULL OR :search = '' OR u.firstName LIKE %:search% or u.lastName LIKE %:search% or u.email LIKE %:search% or u.phone LIKE %:search% or u.city LIKE %:search% ) and " +
+            "(:role IS NULL OR u.role = :role)")
+    Page<User> findAllDeleted(Pageable pageable, @Param("search") String search, @Param("status") Status status ,@Param("role") Role role);
+
+    @Query("SELECT u FROM User u WHERE u.status = :status AND u.id = :id")
+    Optional<User> findDeletedById(@Param("id") Long id, @Param("status") Status status);
 }

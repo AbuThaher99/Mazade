@@ -10,11 +10,12 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    @Query("SELECT p FROM Post p WHERE " +
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true and " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
@@ -22,27 +23,32 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> SortByDate(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
     // Update the other methods similarly
-    @Query("SELECT p FROM Post p WHERE " +
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true and " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
             "ORDER BY p.startPrice ASC")
     Page<Post> SortByPrice(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
-    @Query("SELECT p FROM Post p JOIN p.user u WHERE " +
+    @Query("SELECT p FROM Post p JOIN p.user u WHERE p.isAccepted = true and " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
             "ORDER BY u.rating DESC")
     Page<Post> SortByRating(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
-    @Query("SELECT p FROM Post p WHERE " +
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true and " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category)")
     Page<Post> findAllPosts(Pageable pageable, @Param("search") String search, @Param("category") Category category);
     List<Post> findByAuctionId(Long auctionId);
 
-    @Query("SELECT p FROM Post p WHERE p.user.id = :userId ORDER BY p.createdDate DESC")
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true and p.user.id = :userId ORDER BY p.createdDate DESC")
     Page<Post> findByUserIdOrderByCreatedDateDesc(@Param("userId") Long userId, Pageable pageable);
+    @Query("SELECT p FROM Post p WHERE p.id = :postId AND p.isAccepted = true")
+    Optional<Post> findByIdAndAccepted(Long postId);
+
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = false")
+    Page<Post> findAllToAccept(Pageable pageable);
 }
