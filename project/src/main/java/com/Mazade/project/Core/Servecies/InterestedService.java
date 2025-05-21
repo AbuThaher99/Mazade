@@ -4,6 +4,7 @@ import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Interested;
 import com.Mazade.project.Common.Entities.Post;
 import com.Mazade.project.Common.Entities.User;
+import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Core.Repsitories.InterestedRepository;
 import com.Mazade.project.Core.Repsitories.PostRepository;
 import com.Mazade.project.Core.Repsitories.UserRepository;
@@ -66,7 +67,7 @@ public class InterestedService {
     }
 
     @Transactional(readOnly = true)
-    public PaginationDTO<Post> getInterestedPostsByUserId(Long userId, int page, int size) throws UserNotFoundException {
+    public PaginationDTO<Post> getInterestedPostsByUserId(Long userId, Category category, int page, int size) throws UserNotFoundException {
         userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
 
@@ -75,7 +76,7 @@ public class InterestedService {
         }
 
         Pageable pageable = PageRequest.of(page - 1, size);
-        Page<Post> postsPage = interestedRepository.findPostsByUserIdPaginated(userId, pageable);
+        Page<Post> postsPage = interestedRepository.findPostsByUserIdPaginated(userId,category, pageable);
 
         PaginationDTO<Post> paginationDTO = new PaginationDTO<>();
         paginationDTO.setTotalElements(postsPage.getTotalElements());
