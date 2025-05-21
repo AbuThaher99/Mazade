@@ -208,4 +208,26 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
+    @Operation(summary = "Delete a post (mark as not accepted)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Post deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Post not found",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = "{\"status\":404,\"message\":\"Post not found with id: {postId}\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @DeleteMapping("/posts/{postId}")
+    public ResponseEntity<?> deletePost(@PathVariable Long postId) {
+        try {
+            Post deletedPost = postService.deletePost(postId);
+            return ResponseEntity.ok(deletedPost);
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("status", 404, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", 500, "message", "Internal server error"));
+        }
+    }
 }

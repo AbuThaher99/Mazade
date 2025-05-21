@@ -180,4 +180,31 @@ public class PostController {
                     .body(Map.of("status", 500, "message", "Internal server error"));
         }
     }
+
+    @Operation(summary = "Get all posts won by a user with pagination")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Posts retrieved successfully",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = PaginationDTO.class))),
+            @ApiResponse(responseCode = "404", description = "User not found",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = "{\"status\":404,\"message\":\"User not found with id: 1\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/userWon/{userId}")
+    public ResponseEntity<?> getPostsWonByUserId(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            PaginationDTO<Post> paginatedPosts = postService.getWonPostsByUserId(userId, page, size);
+            return ResponseEntity.ok(paginatedPosts);
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("status", 404, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", 500, "message", "Internal server error"));
+        }
+    }
 }

@@ -3,10 +3,12 @@ package com.Mazade.project.Core.Servecies;
 import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Auction;
 import com.Mazade.project.Common.Entities.Post;
+import com.Mazade.project.Common.Entities.User;
 import com.Mazade.project.Common.Enums.AuctionStatus;
 import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Common.Enums.Status;
 import com.Mazade.project.Core.Repsitories.PostRepository;
+import com.Mazade.project.Core.Repsitories.UserRepository;
 import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -25,13 +27,15 @@ public class PostService {
     private final PostRepository postRepository;
     private final CloudinaryService cloudinaryService;
     private final AuctionService auctionService ;
+    private final UserRepository userRepository;
 
     @Autowired
     public PostService(PostRepository postRepository, CloudinaryService cloudinaryService,
-                       AuctionService auctionService){
+                       AuctionService auctionService, UserRepository userRepository){
         this.postRepository = postRepository;
         this.cloudinaryService = cloudinaryService;
         this.auctionService = auctionService;
+        this.userRepository = userRepository;
     }
 
 
@@ -202,5 +206,38 @@ public class PostService {
         paginationDTO.setContent(postsPage.getContent());
 
         return paginationDTO;
+    }
+
+    @Transactional
+    public PaginationDTO<Post> getWonPostsByUserId(Long userId, int page, int size) throws UserNotFoundException {
+         userRepository.findById(userId).orElseThrow(
+                () -> new UserNotFoundException("User not found with id: " + userId));
+
+        if (page < 1) {
+            page = 1;
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<Post> postsPage = postRepository.findAcceptedPostsByWinnerId(userId, pageable);
+
+        PaginationDTO<Post> paginationDTO = new PaginationDTO<>();
+        paginationDTO.setTotalElements(postsPage.getTotalElements());
+        paginationDTO.setTotalPages(postsPage.getTotalPages());
+        paginationDTO.setSize(postsPage.getSize());
+        paginationDTO.setNumber(postsPage.getNumber() + 1);
+        paginationDTO.setNumberOfElements(postsPage.getNumberOfElements());
+        paginationDTO.setContent(postsPage.getContent());
+
+        return paginationDTO;
+    }
+
+    @Transactional
+    public Post deletePost(Long postId) throws UserNotFoundException {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new UserNotFoundException("Post not found with id: " + postId));
+
+        // Set the post to inactive
+        post.setAccepted(false);
+        return postRepository.save(post);
     }
 }
