@@ -75,7 +75,14 @@ public class PostService {
 
         return savedPost;
     }
+    @Transactional
+    public Post accepetPost(Long postId) throws UserNotFoundException {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new UserNotFoundException("Post not found"));
 
+        post.setAccepted(true);
+        return postRepository.save(post);
+    }
     @Transactional
     public PaginationDTO<Post> getAllPost(int page, int size, String search, Category category,
                                           Boolean sortByDate, Boolean sortByPrice, Boolean sortByRating) {
@@ -112,7 +119,7 @@ public class PostService {
 
     @Transactional
     public Post getPostById(Long postId) throws UserNotFoundException {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findByIdAndAccepted(postId)
                 .orElseThrow(() -> new UserNotFoundException("Post not found with id: " + postId));
 
         post.setViewCount(post.getViewCount() + 1);
@@ -165,6 +172,27 @@ public class PostService {
         Page<Post> postsPage = postRepository.findByUserIdOrderByCreatedDateDesc(userId, pageable);
 
         // Convert to PaginationDTO
+        PaginationDTO<Post> paginationDTO = new PaginationDTO<>();
+        paginationDTO.setTotalElements(postsPage.getTotalElements());
+        paginationDTO.setTotalPages(postsPage.getTotalPages());
+        paginationDTO.setSize(postsPage.getSize());
+        paginationDTO.setNumber(postsPage.getNumber() + 1);
+        paginationDTO.setNumberOfElements(postsPage.getNumberOfElements());
+        paginationDTO.setContent(postsPage.getContent());
+
+        return paginationDTO;
+    }
+
+    @Transactional
+    public PaginationDTO<Post> getPostsWaitingForApproval(int page, int size) {
+        if (page < 1) {
+            page = 1;
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        // Using a JPA Specification to find posts where isAccepted is false
+        Page<Post> postsPage = postRepository.findAllToAccept(pageable);
+
         PaginationDTO<Post> paginationDTO = new PaginationDTO<>();
         paginationDTO.setTotalElements(postsPage.getTotalElements());
         paginationDTO.setTotalPages(postsPage.getTotalPages());

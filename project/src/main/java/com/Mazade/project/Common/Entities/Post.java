@@ -3,6 +3,7 @@ package com.Mazade.project.Common.Entities;
 import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Common.Enums.Status;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -57,6 +58,11 @@ public class Post extends BaseEntity {
     @Column(name = "viewCount")
     @Builder.Default
     private int viewCount = 0;
+
+    @Column(name = "isAccepted")
+    @Builder.Default
+    @JsonIgnore
+    private boolean isAccepted = false;
 
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)

@@ -331,4 +331,95 @@ public class AuthenticationService {
 //        return true;
 //    }
 
+
+    @Transactional
+    public PaginationDTO<User> GetAllUsers(int page, int size, String search, Role role) {
+        if(search != null && search.isEmpty()){
+            search = null;
+        }
+        if(role != null && !EnumSet.allOf(Role.class).contains(role)){
+            role = null;
+        }
+        if (page < 1) {
+            page = 1;
+        }
+        PageRequest pageRequest = PageRequest.of(page - 1, size);
+        Page<User> userPage = repository.findAll(pageRequest, search, Status.ACTIVE,role);
+
+        PaginationDTO<User> paginationDTO = new PaginationDTO<>();
+        paginationDTO.setTotalElements(userPage.getTotalElements());
+        paginationDTO.setTotalPages(userPage.getTotalPages());
+        paginationDTO.setSize(userPage.getSize());
+        paginationDTO.setNumber(userPage.getNumber() + 1);
+        paginationDTO.setNumberOfElements(userPage.getNumberOfElements());
+        paginationDTO.setContent(userPage.getContent());
+
+        return paginationDTO;
+    }
+
+    @Transactional
+    public User getUserById(Long userId) throws UserNotFoundException {
+        return repository.findById(userId, Status.ACTIVE)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+    }
+
+    @Transactional
+    public User saveUser(User user) {
+        return repository.save(user);
+    }
+
+    @Transactional
+    public PaginationDTO<User> getAllDeletedUsers(int page, int size, String search, Role role) {
+        if(search != null && search.isEmpty()){
+            search = null;
+        }
+        if(role != null && !EnumSet.allOf(Role.class).contains(role)){
+            role = null;
+        }
+        if (page < 1) {
+            page = 1;
+        }
+        PageRequest pageRequest = PageRequest.of(page - 1, size);
+        Page<User> userPage = repository.findAllDeleted(pageRequest, search,Status.BLOCKED , role);
+
+        PaginationDTO<User> paginationDTO = new PaginationDTO<>();
+        paginationDTO.setTotalElements(userPage.getTotalElements());
+        paginationDTO.setTotalPages(userPage.getTotalPages());
+        paginationDTO.setSize(userPage.getSize());
+        paginationDTO.setNumber(userPage.getNumber() + 1);
+        paginationDTO.setNumberOfElements(userPage.getNumberOfElements());
+        paginationDTO.setContent(userPage.getContent());
+
+        return paginationDTO;
+    }
+
+    @Transactional
+    public GeneralResponse restoreUser(Long userId) throws UserNotFoundException {
+        User user = repository.findDeletedById(userId, Status.BLOCKED)
+                .orElseThrow(() -> new UserNotFoundException("Deleted user not found with id: " + userId));
+
+        user.setStatus(Status.ACTIVE);
+        repository.save(user);
+
+        return GeneralResponse.builder()
+                .message("User restored successfully")
+                .build();
+    }
+
+    @Transactional
+    public AuthenticationResponse addAdmin(User user) throws UserNotFoundException, IOException {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRole(Role.ADMIN);
+        user.setStatus(Status.ACTIVE);
+        user.setRating(0.0);
+        var savedUser = repository.save(user);
+        var jwtToken = jwtService.generateToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user);
+        saveUserToken(savedUser, jwtToken);
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .message("User " + user.getRole() + " added successfully")
+                .build();
+    }
 }
