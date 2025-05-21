@@ -3,6 +3,7 @@ package com.Mazade.project.WebApi.Controllers.User;
 import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Interested;
 import com.Mazade.project.Common.Entities.Post;
+import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Core.Servecies.InterestedService;
 import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -86,9 +87,10 @@ public class InterestedController {
     public ResponseEntity<?> getInterestedPosts(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Category category) {
         try {
-            PaginationDTO<Post> paginatedPosts = interestedService.getInterestedPostsByUserId(userId, page, size);
+            PaginationDTO<Post> paginatedPosts = interestedService.getInterestedPostsByUserId(userId,category, page, size);
             return ResponseEntity.ok(paginatedPosts);
         } catch (UserNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
