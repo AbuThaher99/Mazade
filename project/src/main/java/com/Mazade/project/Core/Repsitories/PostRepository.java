@@ -51,4 +51,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT p FROM Post p WHERE p.isAccepted = false")
     Page<Post> findAllToAccept(Pageable pageable);
+
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true AND p.winnerId = :userId")
+    Page<Post> findAcceptedPostsByWinnerId(@Param("userId") Long userId, Pageable pageable);
 }
