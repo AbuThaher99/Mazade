@@ -1,6 +1,7 @@
 package com.Mazade.project.WebApi.Controllers.User;
 
 import com.Mazade.project.Common.DTOs.PaginationDTO;
+import com.Mazade.project.Common.Entities.AuctionBidTracker;
 import com.Mazade.project.Common.Entities.Post;
 import com.Mazade.project.Common.Entities.User;
 import com.Mazade.project.Common.Enums.AuctionStatus;
@@ -8,6 +9,7 @@ import com.Mazade.project.Common.Enums.Status;
 import com.Mazade.project.Core.Servecies.AuctionBidTrackerService;
 import com.Mazade.project.Core.Servecies.AuthenticationService;
 import com.Mazade.project.Core.Servecies.PostService;
+import com.Mazade.project.Core.Servecies.WebSocketService;
 import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,6 +37,8 @@ public class PostController {
     private final AuthenticationService authenticationService;
 
     private final AuctionBidTrackerService auctionBidTrackerService;
+
+    private final WebSocketService webSocketService;
 
 
     @Operation(summary = "Add a new post with multiple images")
@@ -137,9 +141,16 @@ public class PostController {
             String token = authenticationService.extractToken(request);
             User user = authenticationService.extractUserFromToken(token);
             Post updatedPost = postService.increasePostFinalPrice(postId, amount);
+
             if (user != null && updatedPost.getAuction().getStatus() == AuctionStatus.IN_PROGRESS) {
-                auctionBidTrackerService.trackBid(updatedPost.getAuction(), updatedPost, user.getId(), amount);
+                AuctionBidTracker tracker = auctionBidTrackerService.trackBid(
+                        updatedPost.getAuction(), updatedPost, user.getId(), amount);
+
+                // Broadcast updates via WebSocket
+                webSocketService.notifyBidUpdate(updatedPost, user.getId(), amount);
+                webSocketService.notifyBidTrackerUpdate(postId, tracker);
             }
+
             return ResponseEntity.ok(updatedPost);
         } catch (UserNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
