@@ -24,9 +24,9 @@ public class AuctionBidTrackerService {
     private final AuctionBidTrackerRepository bidTrackerRepository;
     private final PostRepository postRepository;
     @Transactional
-    public void trackBid(Auction auction, Post post, Long userId, double bidAmount) {
+    public AuctionBidTracker trackBid(Auction auction, Post post, Long userId, double bidAmount) {
         if (auction.getStatus() != AuctionStatus.IN_PROGRESS) {
-            return;
+            return null;
         }
         String userIdentifier = "user-" + userId;
 
@@ -38,7 +38,10 @@ public class AuctionBidTrackerService {
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        bidTrackerRepository.save(bidTracker);
+        AuctionBidTracker savedTracker = bidTrackerRepository.save(bidTracker);
+
+        // Broadcasting is now handled in the controller
+        return savedTracker;
     }
 
     @Transactional

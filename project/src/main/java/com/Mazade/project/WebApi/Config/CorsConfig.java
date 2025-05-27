@@ -14,7 +14,8 @@ public class CorsConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(Arrays.asList("http://localhost:4200","http://127.0.0.1:4200"));
+        corsConfiguration.setAllowedOrigins(Arrays.asList("http://localhost:4200","http://127.0.0.1:4200"
+                ,"http://localhost:3000","http://127.0.0.1:3000","http://127.0.0.1:5500","http://localhost:5500"));
         corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfiguration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         corsConfiguration.setAllowCredentials(true);

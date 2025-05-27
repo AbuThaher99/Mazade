@@ -27,10 +27,14 @@ public class SecurityConfiguration {
             "/v3/api-docs",
             "/v3/api-docs/**",
             "http://127.0.0.1:5500",
+            "http://localhost:5500",
             "http://localhost:4200",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
             "/admin/user/**",
             "/swagger-ui/**",
             "/whitelist/**",
+            "/ws/**",
             "/swagger-ui.html","/resetPasswordPage"};
 
     private final JwtAuthenticationFilter jwtAuthFilter;
