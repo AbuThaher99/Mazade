@@ -15,7 +15,8 @@ import java.util.Optional;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    @Query("SELECT p FROM Post p WHERE p.isAccepted = true and " +
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true " +
+            "and p.status = com.Mazade.project.Common.Enums.Status.WAITING and " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
@@ -23,21 +24,24 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> SortByDate(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
     // Update the other methods similarly
-    @Query("SELECT p FROM Post p WHERE p.isAccepted = true and " +
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true " +
+            "and p.status = com.Mazade.project.Common.Enums.Status.WAITING and " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
             "ORDER BY p.startPrice ASC")
     Page<Post> SortByPrice(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
-    @Query("SELECT p FROM Post p JOIN p.user u WHERE p.isAccepted = true and " +
+    @Query("SELECT p FROM Post p JOIN p.user u WHERE p.isAccepted = true " +
+            "and p.status = com.Mazade.project.Common.Enums.Status.WAITING and " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category) " +
             "ORDER BY u.rating DESC")
     Page<Post> SortByRating(Pageable pageable, @Param("search") String search, @Param("category") Category category);
 
-    @Query("SELECT p FROM Post p WHERE p.isAccepted = true and " +
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true " +
+            "and p.status = com.Mazade.project.Common.Enums.Status.WAITING and " +
             "(:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:category IS NULL OR p.category = :category)")
