@@ -45,8 +45,9 @@ public class AuctionService {
     @Transactional
     public void addPostToAuction(Post post, Auction auction) {
         // Increment the post count
-        auction.setPostCount(auction.getPostCount() + 1);
-
+        int currentCount = auction.getPostCount() + 1;
+        auction.setPostCount(currentCount);
+        post.setAuctionPostNumber(currentCount);
         // Save the auction with the updated post count
         auctionRepository.save(auction);
     }

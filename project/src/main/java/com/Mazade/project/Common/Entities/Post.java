@@ -45,7 +45,7 @@ public class Post extends BaseEntity {
     @NotNull(message = "Bid step cannot be blank")
     private double bidStep;
 
-    @Column(name = "status", columnDefinition = "VARCHAR(10) CHECK (status IN ('WAITING','IN_PROGRESS','COMPLETED'))")
+    @Column(name = "status", columnDefinition = "VARCHAR(255) CHECK (status IN ('WAITING','IN_PROGRESS','COMPLETED'))")
     @Enumerated(EnumType.STRING)
     private Status status;
 
@@ -89,4 +89,7 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "auctionId", nullable = false)
     @JsonBackReference("postAuction")
     private Auction auction;
+
+    @Column(name = "auctionPostNumber")
+    private int auctionPostNumber;
 }
