@@ -62,6 +62,7 @@ public class User extends BaseEntity implements UserDetails {
     private List<Token> tokens;
 
     @Column(name = "gender" , nullable = false)
+    @Enumerated(EnumType.STRING)
     @NotNull(message = "gender cannot be blank")
     private Gender gender;
 

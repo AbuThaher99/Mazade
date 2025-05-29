@@ -161,19 +161,19 @@ public class PostService {
     }
 
     @Transactional
-    public PaginationDTO<Post> getPostsByUserId(Long userId, int page, int size) throws UserNotFoundException {
+    public PaginationDTO<Post> getPostsByUserId(Long userId, int page, int size, Category category) throws UserNotFoundException {
         if (page < 1) {
             page = 1;
         }
         // Check if the user exists
-        if (!postRepository.existsById(userId)) {
+        if (!userRepository.existsById(userId)) {
             throw new UserNotFoundException("User not found with id: " + userId);
         }
 
         Pageable pageable = PageRequest.of(page - 1, size);
 
-        // Find the posts for the specified user
-        Page<Post> postsPage = postRepository.findByUserIdOrderByCreatedDateDesc(userId, pageable);
+        // Find the posts for the specified user with optional category filter
+        Page<Post> postsPage = postRepository.findByUserIdAndCategoryOrderByCreatedDateDesc(userId, category, pageable);
 
         // Convert to PaginationDTO
         PaginationDTO<Post> paginationDTO = new PaginationDTO<>();
@@ -209,8 +209,8 @@ public class PostService {
     }
 
     @Transactional
-    public PaginationDTO<Post> getWonPostsByUserId(Long userId, int page, int size) throws UserNotFoundException {
-         userRepository.findById(userId).orElseThrow(
+    public PaginationDTO<Post> getWonPostsByUserId(Long userId, int page, int size, Category category) throws UserNotFoundException {
+        userRepository.findById(userId).orElseThrow(
                 () -> new UserNotFoundException("User not found with id: " + userId));
 
         if (page < 1) {
@@ -218,7 +218,7 @@ public class PostService {
         }
 
         Pageable pageable = PageRequest.of(page - 1, size);
-        Page<Post> postsPage = postRepository.findAcceptedPostsByWinnerId(userId, pageable);
+        Page<Post> postsPage = postRepository.findAcceptedPostsByWinnerIdAndCategory(userId, category, pageable);
 
         PaginationDTO<Post> paginationDTO = new PaginationDTO<>();
         paginationDTO.setTotalElements(postsPage.getTotalElements());

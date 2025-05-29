@@ -48,14 +48,22 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> findAllPosts(Pageable pageable, @Param("search") String search, @Param("category") Category category);
     List<Post> findByAuctionId(Long auctionId);
 
-    @Query("SELECT p FROM Post p WHERE p.isAccepted = true and p.user.id = :userId ORDER BY p.createdDate DESC")
-    Page<Post> findByUserIdOrderByCreatedDateDesc(@Param("userId") Long userId, Pageable pageable);
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true AND p.user.id = :userId AND (:category IS NULL OR p.category = :category) ORDER BY p.createdDate DESC")
+    Page<Post> findByUserIdAndCategoryOrderByCreatedDateDesc(
+            @Param("userId") Long userId,
+            @Param("category") Category category,
+            Pageable pageable
+    );
     @Query("SELECT p FROM Post p WHERE p.id = :postId AND p.isAccepted = true")
     Optional<Post> findByIdAndAccepted(Long postId);
 
     @Query("SELECT p FROM Post p WHERE p.isAccepted = false")
     Page<Post> findAllToAccept(Pageable pageable);
 
-    @Query("SELECT p FROM Post p WHERE p.isAccepted = true AND p.winnerId = :userId")
-    Page<Post> findAcceptedPostsByWinnerId(@Param("userId") Long userId, Pageable pageable);
+    @Query("SELECT p FROM Post p WHERE p.isAccepted = true AND p.winnerId = :userId AND (:category IS NULL OR p.category = :category)")
+    Page<Post> findAcceptedPostsByWinnerIdAndCategory(
+            @Param("userId") Long userId,
+            @Param("category") Category category,
+            Pageable pageable
+    );
 }

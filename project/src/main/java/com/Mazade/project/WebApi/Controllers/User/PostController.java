@@ -5,6 +5,7 @@ import com.Mazade.project.Common.Entities.AuctionBidTracker;
 import com.Mazade.project.Common.Entities.Post;
 import com.Mazade.project.Common.Entities.User;
 import com.Mazade.project.Common.Enums.AuctionStatus;
+import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Common.Enums.Status;
 import com.Mazade.project.Core.Servecies.AuctionBidTrackerService;
 import com.Mazade.project.Core.Servecies.AuthenticationService;
@@ -179,9 +180,10 @@ public class PostController {
     public ResponseEntity<?> getPostsByUserId(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Category category) {
         try {
-            PaginationDTO<Post> paginatedPosts = postService.getPostsByUserId(userId, page, size);
+            PaginationDTO<Post> paginatedPosts = postService.getPostsByUserId(userId, page, size, category);
             return ResponseEntity.ok(paginatedPosts);
         } catch (UserNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -206,9 +208,10 @@ public class PostController {
     public ResponseEntity<?> getPostsWonByUserId(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Category category) {
         try {
-            PaginationDTO<Post> paginatedPosts = postService.getWonPostsByUserId(userId, page, size);
+            PaginationDTO<Post> paginatedPosts = postService.getWonPostsByUserId(userId, page, size, category);
             return ResponseEntity.ok(paginatedPosts);
         } catch (UserNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
