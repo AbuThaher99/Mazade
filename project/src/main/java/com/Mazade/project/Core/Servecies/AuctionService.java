@@ -1,5 +1,6 @@
 package com.Mazade.project.Core.Servecies;
 
+import com.Mazade.project.Common.DTOs.AuctionDTO;
 import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Auction;
 import com.Mazade.project.Common.Entities.Post;
@@ -141,7 +142,18 @@ public class AuctionService {
     }
 
     @Transactional
-    public Auction getAuctionByCategoryAndStatus(Category category, AuctionStatus status) {
-        return auctionRepository.findByCategoryAndStatus(category, status);
+    public AuctionDTO getAuctionByCategoryAndStatus(Category category, AuctionStatus status) {
+        Auction auction = auctionRepository.findByCategoryAndStatus(category, status);
+        if (auction == null) {
+            throw new UsernameNotFoundException("Auction not found for category: " + category + " and status: " + status);
+        }
+        return new AuctionDTO(
+                auction.getId(),
+                auction.getCategory().name(),
+                auction.getStatus(),
+                auction.getPostCount(),
+                auction.getCreatedDate().toString()
+        );
+
     }
 }

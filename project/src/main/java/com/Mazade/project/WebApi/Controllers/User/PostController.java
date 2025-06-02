@@ -221,4 +221,32 @@ public class PostController {
                     .body(Map.of("status", 500, "message", "Internal server error"));
         }
     }
+
+    @Operation(summary = "Get waiting posts for active auction with pagination")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Posts retrieved successfully",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = PaginationDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Auction not found",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = "{\"status\":404,\"message\":\"Auction not found\"}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/auction-waiting/{auctionId}/")
+    public ResponseEntity<?> getWaitingPostsForActiveAuction(
+            @PathVariable Long auctionId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Category category) {
+        try {
+            PaginationDTO<Post> paginatedPosts = postService.getWaitingPostsForActiveAuction(auctionId, page, size, category);
+            return ResponseEntity.ok(paginatedPosts);
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("status", 404, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", 500, "message", "Internal server error"));
+        }
+    }
 }

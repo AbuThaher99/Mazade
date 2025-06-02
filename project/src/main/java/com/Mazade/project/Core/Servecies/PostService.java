@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -240,4 +241,53 @@ public class PostService {
         post.setAccepted(false);
         return postRepository.save(post);
     }
+
+    @Transactional
+    public PaginationDTO<Post> getWaitingPostsForActiveAuction(Long auctionId, int page, int size, Category category) throws UserNotFoundException {
+        if (page < 1) {
+            page = 1;
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        // Check if there are any IN_PROGRESS posts for this auction
+        long inProgressCount = postRepository.countInProgressPostsForAuction(auctionId);
+
+        // Determine which statuses to include
+        List<Status> statusesToInclude;
+        if (inProgressCount > 0) {
+            // If there are IN_PROGRESS posts, include both WAITING and IN_PROGRESS
+            statusesToInclude = Arrays.asList(Status.WAITING, Status.IN_PROGRESS);
+        } else {
+            // If no IN_PROGRESS posts, only include WAITING
+            statusesToInclude = Arrays.asList(Status.WAITING);
+        }
+
+        // Find the posts for the specified auction with filters
+        Page<Post> postsPage = postRepository.findPostsForActiveAuctionByStatuses(auctionId, statusesToInclude, category, pageable);
+
+        // If this is the first page, has content, and no IN_PROGRESS posts exist yet, mark the oldest post as IN_PROGRESS
+        if (page == 1 && postsPage.hasContent() && inProgressCount == 0) {
+            Post oldestPost = postsPage.getContent().get(0);
+            updatePostStatus(oldestPost.getId(), Status.IN_PROGRESS);
+
+            // Now include both statuses for the refresh
+            statusesToInclude = Arrays.asList(Status.WAITING, Status.IN_PROGRESS);
+
+            // Refresh the page content after updating status
+            postsPage = postRepository.findPostsForActiveAuctionByStatuses(auctionId, statusesToInclude, category, pageable);
+        }
+
+        // Convert to PaginationDTO
+        PaginationDTO<Post> paginationDTO = new PaginationDTO<>();
+        paginationDTO.setTotalElements(postsPage.getTotalElements());
+        paginationDTO.setTotalPages(postsPage.getTotalPages());
+        paginationDTO.setSize(postsPage.getSize());
+        paginationDTO.setNumber(postsPage.getNumber() + 1);
+        paginationDTO.setNumberOfElements(postsPage.getNumberOfElements());
+        paginationDTO.setContent(postsPage.getContent());
+
+        return paginationDTO;
+    }
+
 }
