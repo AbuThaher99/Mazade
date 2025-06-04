@@ -7,10 +7,8 @@ import com.Mazade.project.Common.Entities.User;
 import com.Mazade.project.Common.Enums.AuctionStatus;
 import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Common.Enums.Status;
-import com.Mazade.project.Core.Servecies.AuctionBidTrackerService;
-import com.Mazade.project.Core.Servecies.AuthenticationService;
-import com.Mazade.project.Core.Servecies.PostService;
-import com.Mazade.project.Core.Servecies.WebSocketService;
+import com.Mazade.project.Core.Repsitories.PostRepository;
+import com.Mazade.project.Core.Servecies.*;
 import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,6 +27,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import static com.Mazade.project.WebApi.Config.JwtService.log;
+
+
 @RestController
 @RequestMapping("/posts")
 @RequiredArgsConstructor
@@ -40,7 +41,9 @@ public class PostController {
     private final AuctionBidTrackerService auctionBidTrackerService;
 
     private final WebSocketService webSocketService;
+    private final AuctionTimerService auctionTimerService;
 
+    private final PostRepository postRepository;
 
     @Operation(summary = "Add a new post with multiple images")
     @ApiResponses(value = {
@@ -141,6 +144,14 @@ public class PostController {
         try {
             String token = authenticationService.extractToken(request);
             User user = authenticationService.extractUserFromToken(token);
+
+            // Verify that this post is currently IN_PROGRESS
+            Post currentPost = postService.getPostById(postId);
+            if (currentPost.getStatus() != Status.IN_PROGRESS) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("status", 400, "message", "This item is not currently active for bidding"));
+            }
+
             Post updatedPost = postService.increasePostFinalPrice(postId, amount);
 
             if (user != null && updatedPost.getAuction().getStatus() == AuctionStatus.IN_PROGRESS) {
@@ -150,6 +161,18 @@ public class PostController {
                 // Broadcast updates via WebSocket
                 webSocketService.notifyBidUpdate(updatedPost, user.getId(), amount);
                 webSocketService.notifyBidTrackerUpdate(postId, tracker);
+
+                // RESTART timer to 30 seconds for the current active post
+                if (auctionTimerService.isTimerActive(postId)) {
+                    auctionTimerService.restartPostTimer(postId);
+                    log.info("🔄 Timer restarted to 30 seconds for post {} due to bid by user {}",
+                            postId, user.getId());
+                } else {
+                    // If no timer was active, start a new one (shouldn't happen in normal flow)
+                    auctionTimerService.startPostTimer(postId);
+                    log.info("⏰ Started new timer for post {} due to bid by user {}",
+                            postId, user.getId());
+                }
             }
 
             return ResponseEntity.ok(updatedPost);
@@ -165,6 +188,119 @@ public class PostController {
         }
     }
 
+    /**
+     * Get current active post in an auction
+     */
+    @GetMapping("/auction/{auctionId}/current-active")
+    public ResponseEntity<?> getCurrentActivePost(
+            @PathVariable Long auctionId,
+            HttpServletRequest request) { // Add HttpServletRequest for auth
+        try {
+             String token = authenticationService.extractToken(request);
+             User user = authenticationService.extractUserFromToken(token);
+             if (user == null) {
+                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                         .body(Map.of("status", "error", "message", "Authentication required"));
+             }
+
+            Long activePostId = auctionTimerService.getCurrentActivePostInAuction(auctionId);
+
+            if (activePostId != null) {
+                Post activePost = postService.getPostById(activePostId);
+                long remainingSeconds = auctionTimerService.getRemainingTimeSeconds(activePostId);
+
+                return ResponseEntity.ok(Map.of(
+                        "activePost", activePost,
+                        "remainingSeconds", remainingSeconds,
+                        "isTimerActive", auctionTimerService.isTimerActive(activePostId)
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                        "activePost", null,
+                        "message", "No active post in this auction"
+                ));
+            }
+        } catch (Exception e) {
+            log.error("Error getting current active post for auction {}: {}", auctionId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "error", "message", "Failed to get active post"));
+        }
+    }
+
+    /**
+     * Manual endpoint to start next post in sequence (for testing/admin use)
+     */
+    @PostMapping("/auction/{auctionId}/start-next")
+    public ResponseEntity<?> startNextPostInAuction(@PathVariable Long auctionId) {
+        try {
+            // This is mainly for testing - in normal flow this happens automatically
+            Long activePostId = auctionTimerService.getCurrentActivePostInAuction(auctionId);
+
+            if (activePostId != null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("status", "error", "message", "There is already an active post in this auction"));
+            }
+
+            // Find next waiting post and start it
+            List<Post> waitingPosts = postRepository.findByAuctionIdAndStatusOrderByIdAsc(auctionId, Status.WAITING);
+
+            if (!waitingPosts.isEmpty()) {
+                Post nextPost = waitingPosts.get(0);
+                auctionTimerService.startNextPostInSequence(auctionId, nextPost.getId());
+
+                return ResponseEntity.ok(Map.of(
+                        "status", "success",
+                        "message", "Started next post in sequence",
+                        "postId", nextPost.getId(),
+                        "title", nextPost.getTitle()
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                        "status", "info",
+                        "message", "No more posts waiting in this auction"
+                ));
+            }
+
+        } catch (Exception e) {
+            log.error("Error starting next post in auction {}: {}", auctionId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "error", "message", "Failed to start next post"));
+        }
+    }
+    @PostMapping("/{postId}/start-timer")
+    public ResponseEntity<?> startPostTimer(@PathVariable Long postId) {
+        try {
+            auctionTimerService.startPostTimer(postId);
+            long remainingSeconds = auctionTimerService.getRemainingTimeSeconds(postId);
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Timer started for post " + postId,
+                    "remainingSeconds", remainingSeconds
+            ));
+        } catch (Exception e) {
+            log.error("Error starting timer for post ID: {}", postId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "error", "message", "Failed to start timer"));
+        }
+    }
+    @GetMapping("/{postId}/timer-status")
+    public ResponseEntity<?> getTimerStatus(@PathVariable Long postId) {
+        try {
+            boolean isActive = auctionTimerService.isTimerActive(postId);
+            long remainingSeconds = auctionTimerService.getRemainingTimeSeconds(postId);
+
+            return ResponseEntity.ok(Map.of(
+                    "postId", postId,
+                    "isActive", isActive,
+                    "remainingSeconds", remainingSeconds,
+                    "totalActiveTimers", auctionTimerService.getActiveTimerCount()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "error", "message", "Failed to get timer status"));
+        }
+    }
     @Operation(summary = "Get all posts by user ID with pagination")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Posts retrieved successfully",
