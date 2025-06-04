@@ -1,5 +1,6 @@
 package com.Mazade.project.WebApi.Controllers.User;
 
+import com.Mazade.project.Common.DTOs.AuctionDTO;
 import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Auction;
 import com.Mazade.project.Common.Entities.AuctionBidTracker;
@@ -137,7 +138,7 @@ public class AuctionController {
             @RequestParam Category category,
             @RequestParam AuctionStatus status) {
         try {
-            Auction auction = auctionService.getAuctionByCategoryAndStatus(category, status);
+            AuctionDTO auction = auctionService.getAuctionByCategoryAndStatus(category, status);
             if (auction == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("status", 404, "message", "No auction found with the specified category and status"));
