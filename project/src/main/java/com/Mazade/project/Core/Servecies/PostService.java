@@ -2,11 +2,12 @@ package com.Mazade.project.Core.Servecies;
 
 import com.Mazade.project.Common.DTOs.PaginationDTO;
 import com.Mazade.project.Common.Entities.Auction;
+import com.Mazade.project.Common.Entities.AuctionBidTracker;
 import com.Mazade.project.Common.Entities.Post;
-import com.Mazade.project.Common.Entities.User;
 import com.Mazade.project.Common.Enums.AuctionStatus;
 import com.Mazade.project.Common.Enums.Category;
 import com.Mazade.project.Common.Enums.Status;
+import com.Mazade.project.Core.Repsitories.AuctionBidTrackerRepository;
 import com.Mazade.project.Core.Repsitories.PostRepository;
 import com.Mazade.project.Core.Repsitories.UserRepository;
 import com.Mazade.project.WebApi.Exceptions.UserNotFoundException;
@@ -21,6 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+
+import static com.Mazade.project.WebApi.Config.JwtService.log;
 
 @Service
 public class PostService {
@@ -29,14 +33,17 @@ public class PostService {
     private final CloudinaryService cloudinaryService;
     private final AuctionService auctionService ;
     private final UserRepository userRepository;
+    private final AuctionBidTrackerRepository auctionBidTrackerRepository;
 
     @Autowired
     public PostService(PostRepository postRepository, CloudinaryService cloudinaryService,
-                       AuctionService auctionService, UserRepository userRepository){
+                       AuctionService auctionService, UserRepository userRepository,
+                       AuctionBidTrackerRepository auctionBidTrackerRepository) {
         this.postRepository = postRepository;
         this.cloudinaryService = cloudinaryService;
         this.auctionService = auctionService;
         this.userRepository = userRepository;
+        this.auctionBidTrackerRepository = auctionBidTrackerRepository;
     }
 
 
@@ -144,19 +151,46 @@ public class PostService {
 
         // Check if the auction status is IN_PROGRESS
         if (post.getAuction().getStatus() != AuctionStatus.IN_PROGRESS) {
-            throw new IllegalArgumentException("Cannot increase final price: auction is not in progress");
+            throw new IllegalArgumentException("Cannot place bid: auction is not in progress");
         }
-            // check if the post bid step is less than the amount
-        if (amount < post.getBidStep()) {
-            throw new IllegalArgumentException("Amount must be greater than or equal to the bid step");
-        }
-        // If final price is 0 (initialized but not set), use startPrice as base
-        if (post.getFinalPrice() == 0) {
-            post.setFinalPrice(post.getStartPrice() + amount);
+
+        // --- REVISED BID VALIDATION LOGIC ---
+
+        // Case 1: The auction has NO bids yet.
+        if (post.getFinalPrice() == 0.0) {
+            // For the first bid, the amount must be at least the starting price.
+            if (amount < post.getStartPrice()) {
+
+                throw new IllegalArgumentException(
+                        String.format("First bid of %.2f NIS is below the starting price of %.2f NIS", amount, post.getStartPrice())
+                );
+            }
+            // If amount >= post.getStartPrice(), the bid is valid.
+            System.out.println("Starting new auction with the first bid: " + amount);
+
         } else {
-            // Otherwise add to existing final price
-            post.setFinalPrice(post.getFinalPrice() + amount);
+            // Case 2: The auction already has bids.
+            // The new bid must be greater than the current price + the bid step.
+            double currentPrice = post.getFinalPrice();
+            double minimumBid = currentPrice + post.getBidStep();
+
+            if (amount < minimumBid) {
+                log.info(" 💰hhhhhhhhhhhhhh Placing bid for post {}: current price = {}, bid amount = {}",
+                        postId, post.getFinalPrice(), amount);
+                throw new IllegalArgumentException(
+                        String.format("Bid amount %.2f is below minimum required: %.2f NIS", amount, minimumBid)
+                );
+            }
         }
+
+        // --- END OF REVISED LOGIC ---
+
+        // Set the new highest bid
+        double previousPrice = post.getFinalPrice() != 0.0 ? post.getFinalPrice() : post.getStartPrice();
+        post.setFinalPrice(amount);
+
+        log.info("💰 Valid bid placed for post {}. Price updated from {} to {}",
+                postId, previousPrice, amount);
 
         return postRepository.save(post);
     }
@@ -288,6 +322,33 @@ public class PostService {
         paginationDTO.setContent(postsPage.getContent());
 
         return paginationDTO;
+    }
+
+    @Transactional
+    public void getHighestBidderId(Long postId) throws UserNotFoundException {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new UserNotFoundException("Post not found with id: " + postId));
+
+        // Find the most recent bid tracker for this post
+        Optional<AuctionBidTracker> latestBidder = auctionBidTrackerRepository.findTopByPostIdOrderByCreatedDateDesc(postId);
+
+        if (latestBidder.isPresent()) {
+            // Extract the user ID from the userIdentifier (format: "user-userId")
+            String userIdentifier = latestBidder.get().getUserIdentifier();
+            if (userIdentifier != null && userIdentifier.startsWith("user-")) {
+                try {
+                    Long userId = Long.parseLong(userIdentifier.substring(5)); // Extract the ID part
+
+                    // Update the post with the winner ID
+                    post.setWinnerId(userId);
+                    postRepository.save(post);
+
+                    log.info("🏆 Set winner ID {} for post ID {}", userId, postId);
+                } catch (NumberFormatException e) {
+                    log.error("Failed to parse user ID from userIdentifier: {}", userIdentifier, e);
+                }
+            }
+        }
     }
 
 }

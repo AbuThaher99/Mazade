@@ -24,9 +24,9 @@ public class AuctionScheduler {
 
     /**
      * Scheduled task to open auctions and start sequential processing.
-     * Runs at 6:00 PM every Monday and Thursday And WENESDAY
+     * Runs at 6:00 PM every Monday and Thursday And WENESDAY and sunday and Tuesday.
      */
-    @Scheduled(cron = "0 11 14 * * MON,THU,WED")
+    @Scheduled(cron = "0 26 20 * * MON,THU,WED,SUN,TUE") // Every Monday and Thursday at 6:00 PM
     @Transactional
     public void openAuctionsAndStartSequence() {
         List<Auction> waitingAuctions = auctionRepository.findByStatus(AuctionStatus.WAITING);

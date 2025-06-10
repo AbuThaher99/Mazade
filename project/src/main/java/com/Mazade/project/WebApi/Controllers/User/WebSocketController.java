@@ -51,10 +51,10 @@ public class WebSocketController {
                 return;
             }
 
-            // Extract bid amount
-            double amount = extractBidAmount(bidData);
-            if (amount <= 0) {
-                log.error("❌ Invalid bid amount: {}", amount);
+            // Extract bid amount (this should be the total new bid amount)
+            double bidAmount = extractBidAmount(bidData);
+            if (bidAmount <= 0) {
+                log.error("❌ Invalid bid amount: {}", bidAmount);
                 sendErrorToUser(headerAccessor, "Invalid bid amount");
                 return;
             }
@@ -87,28 +87,26 @@ public class WebSocketController {
                     currentPost.getFinalPrice() : currentPost.getStartPrice();
             double minimumBid = currentPrice + currentPost.getBidStep();
 
-            if (amount < minimumBid) {
-                log.warn("❌ Bid amount {} is below minimum required: {}", amount, minimumBid);
-                sendErrorToUser(headerAccessor,
-                        String.format("Minimum bid is %.2f NIS", minimumBid));
-                return;
-            }
 
-            // Process the bid
-            log.info("💰 Processing bid: Post {}, Amount {}, User {}", postId, amount, userId);
+            // Process the bid with the total amount
+            log.info("💰 Processing bid: Post {}, Amount {}, User {}", postId, bidAmount, userId);
 
-            Post updatedPost = postService.increasePostFinalPrice(postId, amount);
+            Post updatedPost = postService.increasePostFinalPrice(postId, bidAmount);
             User user = authenticationService.getUserById(userId);
 
             if (user != null && updatedPost.getAuction().getStatus() == AuctionStatus.IN_PROGRESS) {
-                // Track the bid
-                AuctionBidTracker tracker = auctionBidTrackerService.trackBid(
-                        updatedPost.getAuction(), updatedPost, userId, amount);
+                // Calculate the bid increment for tracking
+                double bidIncrement = bidAmount - currentPrice;
 
-                log.info("✅ Bid processed successfully. New price: {}", updatedPost.getFinalPrice());
+                // Track the bid with the increment amount
+                AuctionBidTracker tracker = auctionBidTrackerService.trackBid(
+                        updatedPost.getAuction(), updatedPost, userId, bidIncrement);
+
+                log.info("✅ Bid processed successfully. New price: {} (increment: {})",
+                        updatedPost.getFinalPrice(), bidIncrement);
 
                 // Send notifications AFTER successful processing
-                webSocketService.notifyBidUpdate(updatedPost, userId, amount);
+                webSocketService.notifyBidUpdate(updatedPost, userId, bidAmount);
                 webSocketService.notifyBidTrackerUpdate(postId, tracker);
 
                 // Restart timer to 30 seconds
@@ -124,10 +122,10 @@ public class WebSocketController {
 
                 // Send success confirmation to bidder
                 sendSuccessToUser(headerAccessor,
-                        String.format("Bid of %.2f NIS placed successfully!", amount));
+                        String.format("Bid of %.2f NIS placed successfully!", bidAmount));
 
                 log.info("✅ WebSocket bid completed successfully: Post {}, Amount {}, User {}",
-                        postId, amount, userId);
+                        postId, bidAmount, userId);
             } else {
                 log.error("❌ Failed to process bid: User or auction validation failed");
                 sendErrorToUser(headerAccessor, "Failed to process bid");

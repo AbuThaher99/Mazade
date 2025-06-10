@@ -32,8 +32,13 @@ public class AuctionTimerService {
     private final ConcurrentHashMap<Long, ScheduledFuture<?>> activeTimers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, LocalDateTime> timerStartTimes = new ConcurrentHashMap<>();
 
+    // NEW: Track posts in delay phase (between auctions)
+    private final ConcurrentHashMap<Long, ScheduledFuture<?>> delayTimers = new ConcurrentHashMap<>();
+
     // Timer duration in seconds (30 seconds)
     private static final int TIMER_DURATION_SECONDS = 30;
+    // NEW: Delay between auctions in seconds (10 seconds)
+    private static final int AUCTION_DELAY_SECONDS = 10;
 
     /**
      * Start sequential auction processing - only start the FIRST post
@@ -155,7 +160,7 @@ public class AuctionTimerService {
     }
 
     /**
-     * Handle when a post timer expires - move to next post in sequence
+     * Handle when a post timer expires - move to next post in sequence WITH DELAY
      */
     private void handlePostTimerExpired(Long postId) {
         try {
@@ -179,21 +184,22 @@ public class AuctionTimerService {
             postService.updatePostStatus(postId, Status.COMPLETED);
             log.info("✅ Post ID: {} marked as COMPLETED", postId);
 
+            // Set the winner ID for the post (if applicable)
+            postService.getHighestBidderId(postId);
+
             // Notify clients that this post's auction ended
             notifyTimerExpired(postId);
 
-            // Find and start the next post in the auction
+            // Find the next post in the auction
             Long auctionId = completedPost.getAuction().getId();
             Post nextPost = findNextPostInAuction(auctionId);
 
             if (nextPost != null) {
-                log.info("➡️ Moving to next post in auction {}: {} ({})",
+                log.info("⏳ Starting 10-second delay before next post in auction {}: {} ({})",
                         auctionId, nextPost.getId(), nextPost.getTitle());
 
-                // Add small delay before starting next post (optional)
-                scheduler.schedule(() -> {
-                    startNextPostInSequence(auctionId, nextPost.getId());
-                }, 2, TimeUnit.SECONDS);
+                // NEW: Start delay phase with countdown
+                startAuctionDelay(postId, auctionId, nextPost);
 
             } else {
                 log.info("🏁 No more posts in auction {}. Auction sequence completed!", auctionId);
@@ -202,6 +208,56 @@ public class AuctionTimerService {
 
         } catch (Exception e) {
             log.error("Error handling timer expiration for post ID: {}", postId, e);
+        }
+    }
+
+    /**
+     * NEW: Start the delay phase between auctions
+     */
+    private void startAuctionDelay(Long completedPostId, Long auctionId, Post nextPost) {
+        try {
+            // Notify that delay phase started
+            notifyAuctionDelayStarted(completedPostId, nextPost.getTitle());
+
+            // Schedule countdown notifications (optional - every 2 seconds)
+            for (int i = 8; i >= 2; i -= 2) {
+                final int remainingSeconds = i;
+                scheduler.schedule(() -> {
+                    notifyAuctionDelayCountdown(completedPostId, remainingSeconds, nextPost.getTitle());
+                }, AUCTION_DELAY_SECONDS - i, TimeUnit.SECONDS);
+            }
+
+            // Schedule the main delay task
+            ScheduledFuture<?> delayTask = scheduler.schedule(() -> {
+                handleDelayCompleted(auctionId, nextPost.getId());
+            }, AUCTION_DELAY_SECONDS, TimeUnit.SECONDS);
+
+            // Store the delay timer reference
+            delayTimers.put(completedPostId, delayTask);
+
+        } catch (Exception e) {
+            log.error("Error starting auction delay for post ID: {}", completedPostId, e);
+        }
+    }
+
+    /**
+     * NEW: Handle when the delay phase is completed
+     */
+    private void handleDelayCompleted(Long auctionId, Long nextPostId) {
+        try {
+            log.info("✅ Auction delay completed. Starting next post: {}", nextPostId);
+
+            // Remove from delay timers
+            delayTimers.remove(nextPostId);
+
+            // Notify that delay is over and next auction is starting
+            notifyAuctionDelayCompleted(nextPostId);
+
+            // Start the next post in sequence
+            startNextPostInSequence(auctionId, nextPostId);
+
+        } catch (Exception e) {
+            log.error("Error handling delay completion for next post ID: {}", nextPostId, e);
         }
     }
 
@@ -270,7 +326,7 @@ public class AuctionTimerService {
             log.info("   - Title: {}", post.getTitle());
             log.info("   - Starting Price: {} NIS", post.getStartPrice());
             log.info("   - Final Price: {} NIS", post.getFinalPrice() != 0.0? post.getFinalPrice() : post.getStartPrice());
-            log.info("   - Total Bids: {}", bidCount); // Fixed: Using repository query instead of lazy collection
+            log.info("   - Total Bids: {}", bidCount);
             log.info("   - Auction ID: {}", post.getAuction().getId());
 
             if (post.getFinalPrice() != 0.0 && post.getFinalPrice() > post.getStartPrice()) {
@@ -292,6 +348,13 @@ public class AuctionTimerService {
             timerStartTimes.remove(postId);
             log.info("⏹️ Timer stopped for post ID: {}", postId);
             notifyTimerStopped(postId);
+        }
+
+        // NEW: Also stop any delay timer
+        ScheduledFuture<?> delayTimer = delayTimers.remove(postId);
+        if (delayTimer != null) {
+            delayTimer.cancel(false);
+            log.info("⏹️ Delay timer stopped for post ID: {}", postId);
         }
     }
 
@@ -331,6 +394,13 @@ public class AuctionTimerService {
      */
     public boolean isTimerActive(Long postId) {
         return activeTimers.containsKey(postId);
+    }
+
+    /**
+     * NEW: Check if post is in delay phase
+     */
+    public boolean isInDelayPhase(Long postId) {
+        return delayTimers.containsKey(postId);
     }
 
     /**
@@ -416,7 +486,7 @@ public class AuctionTimerService {
                     .event("TIMER_EXPIRED")
                     .remainingSeconds(0)
                     .timestamp(LocalDateTime.now().toString())
-                    .message("Auction ended for this item - moving to next item")
+                    .message("Auction ended for this item")
                     .build();
 
             webSocketService.sendTimerNotification(postId, notification);
@@ -438,6 +508,55 @@ public class AuctionTimerService {
             webSocketService.sendTimerNotification(postId, notification);
         } catch (Exception e) {
             log.error("Error sending post start notification for post ID: {}", postId, e);
+        }
+    }
+
+    // NEW: Delay phase notification methods
+    private void notifyAuctionDelayStarted(Long postId, String nextPostTitle) {
+        try {
+            TimerNotification notification = TimerNotification.builder()
+                    .postId(postId)
+                    .event("AUCTION_DELAY_STARTED")
+                    .remainingSeconds(AUCTION_DELAY_SECONDS)
+                    .timestamp(LocalDateTime.now().toString())
+                    .message("Auction completed! Next item: " + nextPostTitle + " (starting in 10 seconds)")
+                    .build();
+
+            webSocketService.sendTimerNotification(postId, notification);
+        } catch (Exception e) {
+            log.error("Error sending auction delay start notification for post ID: {}", postId, e);
+        }
+    }
+
+    private void notifyAuctionDelayCountdown(Long postId, int remainingSeconds, String nextPostTitle) {
+        try {
+            TimerNotification notification = TimerNotification.builder()
+                    .postId(postId)
+                    .event("AUCTION_DELAY_COUNTDOWN")
+                    .remainingSeconds(remainingSeconds)
+                    .timestamp(LocalDateTime.now().toString())
+                    .message("Next item: " + nextPostTitle + " (starting in " + remainingSeconds + " seconds)")
+                    .build();
+
+            webSocketService.sendTimerNotification(postId, notification);
+        } catch (Exception e) {
+            log.error("Error sending auction delay countdown notification for post ID: {}", postId, e);
+        }
+    }
+
+    private void notifyAuctionDelayCompleted(Long nextPostId) {
+        try {
+            TimerNotification notification = TimerNotification.builder()
+                    .postId(nextPostId)
+                    .event("AUCTION_DELAY_COMPLETED")
+                    .remainingSeconds(0)
+                    .timestamp(LocalDateTime.now().toString())
+                    .message("Starting next auction now!")
+                    .build();
+
+            webSocketService.sendTimerNotification(nextPostId, notification);
+        } catch (Exception e) {
+            log.error("Error sending auction delay completion notification for post ID: {}", nextPostId, e);
         }
     }
 
@@ -465,6 +584,11 @@ public class AuctionTimerService {
         log.info("Shutting down auction timer service...");
         activeTimers.values().forEach(timer -> timer.cancel(false));
         activeTimers.clear();
+
+        // NEW: Cancel delay timers too
+        delayTimers.values().forEach(timer -> timer.cancel(false));
+        delayTimers.clear();
+
         timerStartTimes.clear();
         scheduler.shutdown();
     }
